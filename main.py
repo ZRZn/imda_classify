@@ -22,8 +22,8 @@ KEEP_PROB = 0.8
 DELTA = 0.5
 
 #Load Data
-train_fir = open("/Users/ZRZn1/Downloads/train.pkl", "rb")
-test_fir = open("/Users/ZRZn1/Downloads/test.pkl", "rb")
+train_fir = open("/Users/zrzn/Downloads/imda_classify/train.pkl", "rb")
+test_fir = open("/Users/zrzn/Downloads/imda_classify/test.pkl", "rb")
 train_X = pickle.load(train_fir)
 train_Y = pickle.load(train_fir)
 test_X = pickle.load(test_fir)
@@ -38,39 +38,54 @@ def length(sequences):
     return tf.cast(seq_len, tf.int32)
 
 #placeholders
-words_data = tf.placeholder(tf.int32, [None, None])
-labels = tf.placeholder(tf.float32, [None])
+words_data = tf.placeholder(tf.int32, [BATCH_SIZE, DOCU_LENTH, SEN_LENTH])
+labels = tf.placeholder(tf.float32, [BATCH_SIZE])
 keep_prob_ph = tf.placeholder(tf.float32)
 # seq_len_ph = tf.placeholder(tf.int32, [None])
 # docu_len_ph = tf.placeholder(tf.int32, [None])
 #Embedding Layer
-embeddings = tf.Variable(tf.random_uniform([30000, EMBEDDING_SIZE], -1.0, 1.0), name="embeddings", trainable=True)
-data_emd = tf.nn.embedding_lookup(embeddings, words_data)
+embeddings = tf.Variable(tf.random_uniform([50000, EMBEDDING_SIZE], -1.0, 1.0), trainable=True, name="embeddings")
+word_embedded = tf.nn.embedding_lookup(embeddings, words_data)
 
 #Sen-Level Bi-RNN Layers
-data_emd = tf.reshape(data_emd, [-1, SEN_LENTH, EMBEDDING_SIZE])
-rnn_outputs, _ = bi_rnn(GRUCell(HIDDEN_SIZE, EMBEDDING_SIZE), GRUCell(HIDDEN_SIZE, EMBEDDING_SIZE),
-                        inputs=data_emd, sequence_length=length(data_emd),  dtype=tf.float32)
+word_embedded = tf.reshape(word_embedded, [-1, SEN_LENTH, EMBEDDING_SIZE])
+with tf.variable_scope("word_encoder"):
+    gru_fw = GRUCell(HIDDEN_SIZE)
+    gru_bw = GRUCell(HIDDEN_SIZE)
+    rnn_outputs, _ = bi_rnn(cell_fw=gru_fw,
+                        cell_bw=gru_bw,
+                        inputs=word_embedded,
+                        sequence_length=length(word_embedded),
+                        dtype=tf.float32)
 
 #Attention Layer
 attention_output, alphas = attention(rnn_outputs, ATTENTION_SIZE, return_alphas=True)
 
 #Docu-Level Bi-RNN Layers
 attention_output = tf.reshape(attention_output, [-1, DOCU_LENTH, HIDDEN_SIZE * 2])
-sen_rnn_outputs, _ = bi_rnn(GRUCell(HIDDEN_SIZE, HIDDEN_SIZE * 2), GRUCell(HIDDEN_SIZE, HIDDEN_SIZE * 2),
-                            inputs=attention_output, sequence_length=length(attention_output), dtype=tf.float32)
+with tf.variable_scope("sent_encoder"):
+    gru_fw2 = GRUCell(HIDDEN_SIZE)
+    gru_bw2= GRUCell(HIDDEN_SIZE)
+    sen_rnn_outputs, _ = bi_rnn(cell_fw=gru_fw2,
+                            cell_bw=gru_bw2,
+                            inputs=attention_output,
+                            sequence_length=length(attention_output),
+                            dtype=tf.float32)
 
 #Attention Layer
 docu_atten_output, alphas = attention(sen_rnn_outputs, ATTENTION_SIZE, return_alphas=True)
 
-#Dropout
-drop_out = tf.nn.dropout(docu_atten_output, keep_prob_ph)
+# #Dropout
+# drop_out = tf.nn.dropout(docu_atten_output, keep_prob_ph)
 
 #Full Connected
-out = fully_connected(inputs=drop_out, num_outputs=1, activation_fn=None)
+W = tf.Variable(tf.truncated_normal([HIDDEN_SIZE * 2, 1], stddev=0.1))
+b = tf.Variable(tf.constant(0., shape=[1]))
+out = tf.nn.xw_plus_b(docu_atten_output, W, b)
+out = tf.squeeze(out)
 
 #Loss
-loss = tf.reduce_mean(tf.nn.sigmod_cross_entropy_with_logits(labels=labels, logits=out))
+loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=out))
 optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(loss=loss)
 
 # Accuracy metric
@@ -81,7 +96,7 @@ test_batch_generator = batch_generator(test_X, test_Y, BATCH_SIZE)
 
 saver = tf.train.Saver()
 with tf.Session() as sess:
-    saver.restore(sess, "/Users/ZRZn1/Downloads/embedding.ckpt")
+    # saver.restore(sess, "/Users/zrzn/Downloads/imda_classify/embedding.ckpt")
     sess.run(tf.global_variables_initializer())
     print("Start learning...")
     for epoch in range(NUM_EPOCHS):
@@ -96,7 +111,8 @@ with tf.Session() as sess:
         num_batches = train_X.shape[0] // BATCH_SIZE
         for b in range(num_batches):
             x_batch, y_batch = next(train_batch_generator)
-            seq_len = np.array([list(x).index(0) + 1 for x in x_batch])  # actual lengths of sequences
+            seq_len = np.array([40 for x in range(BATCH_SIZE * SEN_LENTH)])  # actual lengths of sequences
+            docu_len = np.array([10 for x in range(BATCH_SIZE)])
             loss_tr, acc, _ = sess.run([loss, accuracy, optimizer],
                                        feed_dict={words_data: x_batch,
                                                   labels: y_batch,
@@ -109,7 +125,8 @@ with tf.Session() as sess:
         num_batches = test_X.shape[0] // BATCH_SIZE
         for b in range(num_batches):
             x_batch, y_batch = next(test_batch_generator)
-            seq_len = np.array([list(x).index(0) + 1 for x in x_batch])  # actual lengths of sequences
+            seq_len = np.array([40 for x in range(BATCH_SIZE * DOCU_LENTH)])  # actual lengths of sequences
+            docu_len = np.array([10 for x in range(BATCH_SIZE)])
             loss_test_batch, acc = sess.run([loss, accuracy],
                                             feed_dict={words_data: x_batch,
                                                        labels: y_batch,
@@ -118,7 +135,7 @@ with tf.Session() as sess:
             loss_test += loss_test_batch
         accuracy_test /= num_batches
         loss_test /= num_batches
-
+        print("accuracy == ", accuracy_test)
         print("loss: {:.3f}, val_loss: {:.3f}, acc: {:.3f}, val_acc: {:.3f}".format(
             loss_train, loss_test, accuracy_train, accuracy_test
         ))

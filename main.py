@@ -49,16 +49,14 @@ data_emd = tf.nn.embedding_lookup(embeddings, words_data)
 
 #Sen-Level Bi-RNN Layers
 data_emd = tf.reshape(data_emd, [-1, SEN_LENTH, EMBEDDING_SIZE])
-rnn_outputs, _ = bi_rnn(GRUCell(HIDDEN_SIZE, EMBEDDING_SIZE), GRUCell(HIDDEN_SIZE, EMBEDDING_SIZE),
-                        inputs=data_emd, sequence_length=length(data_emd),  dtype=tf.float32)
+rnn_outputs, _ = bi_rnn(GRUCell(HIDDEN_SIZE, EMBEDDING_SIZE), GRUCell(HIDDEN_SIZE, EMBEDDING_SIZE), inputs=data_emd, sequence_length=length(data_emd),  dtype=tf.float32)
 
 #Attention Layer
 attention_output, alphas = attention(rnn_outputs, ATTENTION_SIZE, return_alphas=True)
 
 #Docu-Level Bi-RNN Layers
 attention_output = tf.reshape(attention_output, [-1, DOCU_LENTH, HIDDEN_SIZE * 2])
-sen_rnn_outputs, _ = bi_rnn(GRUCell(HIDDEN_SIZE, HIDDEN_SIZE * 2), GRUCell(HIDDEN_SIZE, HIDDEN_SIZE * 2),
-                            inputs=attention_output, sequence_length=length(attention_output), dtype=tf.float32)
+sen_rnn_outputs, _ = bi_rnn(GRUCell(HIDDEN_SIZE, HIDDEN_SIZE * 2), GRUCell(HIDDEN_SIZE, HIDDEN_SIZE * 2), inputs=attention_output, sequence_length=length(attention_output), dtype=tf.float32)
 
 #Attention Layer
 docu_atten_output, alphas = attention(sen_rnn_outputs, ATTENTION_SIZE, return_alphas=True)

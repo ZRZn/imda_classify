@@ -5,7 +5,7 @@ import tensorflow as tf
 import pickle
 import os
 from attention import attention
-
+from tensorflow.contrib import layers
 from tensorflow.contrib.rnn import GRUCell
 from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn as bi_rnn
 from tensorflow.contrib.layers import fully_connected
@@ -16,21 +16,39 @@ BATCH_SIZE = 64
 HIDDEN_SIZE = 50
 EMBEDDING_SIZE = 200
 ATTENTION_SIZE = 100
-SEN_LENTH = 40
-DOCU_LENTH = 10
+SEN_LENTH = 30
+DOCU_LENTH = 11
 KEEP_PROB = 0.8
 DELTA = 0.5
 
 #Load Data
-train_fir = open("/Users/zrzn/Downloads/imda_classify/train.pkl", "rb")
-test_fir = open("/Users/zrzn/Downloads/imda_classify/test.pkl", "rb")
+train_fir = open("/Users/zrzn/Downloads/classify_data/train.pkl", "rb")
+test_fir = open("/Users/zrzn/Downloads/classify_data/test.pkl", "rb")
+emb_fir = open("/Users/zrzn/Downloads/classify_data/embedding.pkl", "rb")
 train_X = pickle.load(train_fir)
 train_Y = pickle.load(train_fir)
 test_X = pickle.load(test_fir)
 test_Y = pickle.load(test_fir)
+emb_numpy = pickle.load(emb_fir)
 
 train_fir.close()
 test_fir.close()
+emb_fir.close()
+
+
+def AttentionLayer(inputs, name):
+    # inputs是GRU的输出，size是[batch_size, max_time, encoder_size(hidden_size * 2)]
+    with tf.variable_scope(name):
+        # u_context是上下文的重要性向量，用于区分不同单词/句子对于句子/文档的重要程度,
+        # 因为使用双向GRU，所以其长度为2×hidden_szie
+        u_context = tf.Variable(tf.truncated_normal([HIDDEN_SIZE * 2]), name='u_context')
+        # 使用一个全连接层编码GRU的输出的到期隐层表示,输出u的size是[batch_size, max_time, hidden_size * 2]
+        h = layers.fully_connected(inputs, HIDDEN_SIZE * 2, activation_fn=tf.nn.tanh)
+        # shape为[batch_size, max_time, 1]
+        alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(h, u_context), axis=2, keep_dims=True), dim=1)
+        # reduce_sum之前shape为[batch_szie, max_time, hidden_szie*2]，之后shape为[batch_size, hidden_size*2]
+        atten_output = tf.reduce_sum(tf.multiply(inputs, alpha), axis=1)
+        return atten_output
 
 def length(sequences):
     used = tf.sign(tf.reduce_max(tf.abs(sequences), reduction_indices=2))
@@ -39,12 +57,12 @@ def length(sequences):
 
 #placeholders
 words_data = tf.placeholder(tf.int32, [BATCH_SIZE, DOCU_LENTH, SEN_LENTH])
-labels = tf.placeholder(tf.float32, [BATCH_SIZE])
+labels = tf.placeholder(tf.float32, [BATCH_SIZE, 10])
 keep_prob_ph = tf.placeholder(tf.float32)
 # seq_len_ph = tf.placeholder(tf.int32, [None])
 # docu_len_ph = tf.placeholder(tf.int32, [None])
 #Embedding Layer
-embeddings = tf.Variable(tf.random_uniform([50000, EMBEDDING_SIZE], -1.0, 1.0), trainable=True, name="embeddings")
+embeddings = tf.Variable(emb_numpy, trainable=True, name="embeddings")
 word_embedded = tf.nn.embedding_lookup(embeddings, words_data)
 
 #Sen-Level Bi-RNN Layers
@@ -52,44 +70,45 @@ word_embedded = tf.reshape(word_embedded, [-1, SEN_LENTH, EMBEDDING_SIZE])
 with tf.variable_scope("word_encoder"):
     gru_fw = GRUCell(HIDDEN_SIZE)
     gru_bw = GRUCell(HIDDEN_SIZE)
-    rnn_outputs, _ = bi_rnn(cell_fw=gru_fw,
+    (f_out, b_out), _ = bi_rnn(cell_fw=gru_fw,
                         cell_bw=gru_bw,
                         inputs=word_embedded,
                         sequence_length=length(word_embedded),
                         dtype=tf.float32)
+    rnn_outputs = tf.concat((f_out, b_out), axis= 2)
 
 #Attention Layer
-attention_output, alphas = attention(rnn_outputs, ATTENTION_SIZE, return_alphas=True)
+attention_output = AttentionLayer(rnn_outputs, "word_encoder")
 
 #Docu-Level Bi-RNN Layers
 attention_output = tf.reshape(attention_output, [-1, DOCU_LENTH, HIDDEN_SIZE * 2])
 with tf.variable_scope("sent_encoder"):
     gru_fw2 = GRUCell(HIDDEN_SIZE)
     gru_bw2= GRUCell(HIDDEN_SIZE)
-    sen_rnn_outputs, _ = bi_rnn(cell_fw=gru_fw2,
+    (f_out2, b_out2), _ = bi_rnn(cell_fw=gru_fw2,
                             cell_bw=gru_bw2,
                             inputs=attention_output,
                             sequence_length=length(attention_output),
                             dtype=tf.float32)
+    sen_rnn_outputs = tf.concat((f_out2, b_out2), axis= 2)
 
 #Attention Layer
-docu_atten_output, alphas = attention(sen_rnn_outputs, ATTENTION_SIZE, return_alphas=True)
-
-# #Dropout
-# drop_out = tf.nn.dropout(docu_atten_output, keep_prob_ph)
+docu_atten_output = AttentionLayer(sen_rnn_outputs, "sent_encoder")
 
 #Full Connected
-W = tf.Variable(tf.truncated_normal([HIDDEN_SIZE * 2, 1], stddev=0.1))
-b = tf.Variable(tf.constant(0., shape=[1]))
+W = tf.Variable(tf.truncated_normal([HIDDEN_SIZE * 2, 10], stddev=0.1))
+b = tf.Variable(tf.constant(0., shape=[10]))
 out = tf.nn.xw_plus_b(docu_atten_output, W, b)
 out = tf.squeeze(out)
 
 #Loss
-loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=out))
-optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(loss=loss)
+loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=out))
+optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss=loss)
 
 # Accuracy metric
-accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.round(tf.sigmoid(out)), labels), tf.float32))
+predict = tf.argmax(out, axis=1, name='predict')
+label = tf.argmax(labels, axis=1, name='label')
+accuracy = tf.reduce_mean(tf.cast(tf.equal(predict, label), tf.float32))
 
 train_batch_generator = batch_generator(train_X, train_Y, BATCH_SIZE)
 test_batch_generator = batch_generator(test_X, test_Y, BATCH_SIZE)

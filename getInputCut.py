@@ -15,7 +15,7 @@ def getInput(file_path, classify=0):
     data = []
     labels = []
     zeroSen = []
-    for i in range(40):
+    for i in range(30):
         zeroSen.append(0)
     for dir in dirs:
         f = open(file_path + "/" + dir, "r")
@@ -37,17 +37,17 @@ def getInput(file_path, classify=0):
                     if word in dictionary:
                         temp_index = dictionary[word]
                     temp_words.append(temp_index)
-                if len(temp_words) < 40:
-                    for i in range(40 - len(temp_words)):
+                if len(temp_words) < 30:
+                    for i in range(30 - len(temp_words)):
                         temp_words.append(0)
-                elif len(temp_words) > 40:
-                    temp_words = temp_words[:40]
+                elif len(temp_words) > 30:
+                    temp_words = temp_words[:30]
                 temp.append(temp_words)
-        if len(temp) < 10:
-            for i in range(10 - len(temp)):
+        if len(temp) < 8:
+            for i in range(8 - len(temp)):
                 temp.append(zeroSen)
-        elif len(temp) > 10:
-            temp = temp[:10]
+        elif len(temp) > 8:
+            temp = temp[:8]
         data.append(temp)
         labels.append(classify)
         f.close()
@@ -62,11 +62,10 @@ for train in train_neg:
     train_pos.append(train)
 for y in train_label_neg:
     train_label_pos.append(y)
+for i in range(10):
+    print(train_pos[i])
 train_X = np.array(train_pos)
-count = 0
-for train in train_X:
-    count += 1
-print("count == " + str(count))
+print("train_x.shape == ", train_X.shape)
 train_Y = np.array(train_label_pos)
 print("train_Y == ", train_Y)
 print("train_Y.shape == ", train_Y.shape)

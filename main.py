@@ -16,14 +16,14 @@ BATCH_SIZE = 64
 HIDDEN_SIZE = 50
 EMBEDDING_SIZE = 200
 ATTENTION_SIZE = 100
-SEN_LENTH = 40
-DOCU_LENTH = 10
+SEN_LENTH = 30
+DOCU_LENTH = 8
 KEEP_PROB = 0.8
 DELTA = 0.5
 
 #Load Data
-train_fir = open("/Users/zrzn/Downloads/imda_classify/train.pkl", "rb")
-test_fir = open("/Users/zrzn/Downloads/imda_classify/test.pkl", "rb")
+train_fir = open("/Users/ZRZn1/Downloads/train.pkl", "rb")
+test_fir = open("/Users/ZRZn1/Downloads/test.pkl", "rb")
 train_X = pickle.load(train_fir)
 train_Y = pickle.load(train_fir)
 test_X = pickle.load(test_fir)
@@ -44,7 +44,11 @@ keep_prob_ph = tf.placeholder(tf.float32)
 # seq_len_ph = tf.placeholder(tf.int32, [None])
 # docu_len_ph = tf.placeholder(tf.int32, [None])
 #Embedding Layer
-embeddings = tf.Variable(tf.random_uniform([50000, EMBEDDING_SIZE], -1.0, 1.0), trainable=True, name="embeddings")
+emb_fir = open("/Users/ZRZn1/Downloads/emb_array.pkl", "rb")
+emb_np = pickle.load(emb_fir)
+#embeddings = tf.convert_to_tensor(emb_np, name="embeddings")
+
+embeddings = tf.Variable(initial_value=emb_np, trainable=True, name="embeddings")
 word_embedded = tf.nn.embedding_lookup(embeddings, words_data)
 
 #Sen-Level Bi-RNN Layers
@@ -75,18 +79,18 @@ with tf.variable_scope("sent_encoder"):
 #Attention Layer
 docu_atten_output, alphas = attention(sen_rnn_outputs, ATTENTION_SIZE, return_alphas=True)
 
-# #Dropout
-# drop_out = tf.nn.dropout(docu_atten_output, keep_prob_ph)
+#Dropout
+drop_out = tf.nn.dropout(docu_atten_output, keep_prob_ph)
 
 #Full Connected
 W = tf.Variable(tf.truncated_normal([HIDDEN_SIZE * 2, 1], stddev=0.1))
 b = tf.Variable(tf.constant(0., shape=[1]))
-out = tf.nn.xw_plus_b(docu_atten_output, W, b)
+out = tf.nn.xw_plus_b(drop_out, W, b)
 out = tf.squeeze(out)
 
 #Loss
 loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=out))
-optimizer = tf.train.AdamOptimizer(learning_rate=1e-3).minimize(loss=loss)
+optimizer = tf.train.AdamOptimizer(learning_rate=0.01).minimize(loss=loss)
 
 # Accuracy metric
 accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.round(tf.sigmoid(out)), labels), tf.float32))
@@ -94,7 +98,7 @@ accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.round(tf.sigmoid(out)), labels), t
 train_batch_generator = batch_generator(train_X, train_Y, BATCH_SIZE)
 test_batch_generator = batch_generator(test_X, test_Y, BATCH_SIZE)
 
-saver = tf.train.Saver()
+# saver = tf.train.Saver()
 with tf.Session() as sess:
     # saver.restore(sess, "/Users/zrzn/Downloads/imda_classify/embedding.ckpt")
     sess.run(tf.global_variables_initializer())

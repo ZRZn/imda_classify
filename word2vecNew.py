@@ -156,7 +156,6 @@ with graph.as_default():
 
   # Add variable initializer.
   init = tf.global_variables_initializer()
-saver = tf.train.Saver({'embeddings': embeddings})
 # Step 5: Begin training.
 num_steps = 100001
 
@@ -196,5 +195,6 @@ with tf.Session(graph=graph) as session:
           log_str = "%s %s," % (log_str, close_word)
         print(log_str)
   final_embeddings = normalized_embeddings.eval()
-  save_path = saver.save(session, "/Users/ZRZn1/Downloads/embedding.ckpt")
-  print("save_path == " + str(save_path))
+  emb_file = open("/Users/ZRZn1/Downloads/emb_array.pkl", "wb")
+  pickle.dump(final_embeddings, emb_file)
+  emb_file.close()

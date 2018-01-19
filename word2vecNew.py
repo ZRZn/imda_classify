@@ -9,40 +9,66 @@ import random
 import numpy as np
 import tensorflow as tf
 import pickle
+import nltk
+from nltk.tokenize import WordPunctTokenizer
+word_cut = WordPunctTokenizer()
+tokenizer = nltk.data.load('/Users/zrzn/Downloads/nltk_data/tokenizers/punkt/PY3/english.pickle')
+
 
 
 # Read the data into a list of strings.
-def read_data(file_path):
-  dirs = os.listdir(file_path)
+# def read_data(file_path):
+#   dirs = os.listdir(file_path)
+#   data = list()
+#   for dir in dirs:
+#       f = open(file_path + "/" + dir, "r")
+#       for line in f:
+#           line = line.replace('.', '')
+#           line = line.replace('!', '')
+#           line = line.replace('<br /><br />', '')
+#           line = line.replace('?', '')
+#           line = line.replace('*', '')
+#           line = line.replace(',', '')
+#           data.extend(line.split())
+#       f.close()
+#   return data
+
+
+def read_data(file_path_list):
   data = list()
-  for dir in dirs:
-      f = open(file_path + "/" + dir, "r")
-      for line in f:
-          line = line.replace('.', '')
-          line = line.replace('!', '')
-          line = line.replace('<br /><br />', '')
-          line = line.replace('?', '')
-          line = line.replace('*', '')
-          line = line.replace(',', '')
-          data.extend(line.split())
-      f.close()
+  for file_path in file_path_list:
+    f = open(file_path, "r")
+    for line in f:
+      line = line.replace('<sssss>', '')
+      line = line.split("		")
+      data.extend(word_cut.tokenize(line[3]))
+    f.close()
   return data
 
-words = read_data("/Users/ZRZn1/Downloads/aclImdb/train/unsup")
+
+
+
+words = read_data(["/Users/zrzn/Downloads/data/IMDB/test.txt", "/Users/zrzn/Downloads/data/IMDB/train.txt"])
 
 
 print('Data size == ', len(words))
 
 # Step 2: Build the dictionary and replace rare words with UNK token.
-vocabulary_size = 50000
+
 
 
 def build_dataset(words):
-  count = [['UNK', -1]]
-  count.extend(collections.Counter(words).most_common(vocabulary_size - 1))
+  # count = [['UNK', -1]]
+  # count.extend(collections.Counter(words).most_common(vocabulary_size - 1))
+  count = collections.Counter(words)
+  count = count.most_common(len(count))
+
   dictionary = dict()
-  for word, _ in count:
-    dictionary[word] = len(dictionary)
+  # for word, _ in count:
+  #   dictionary[word] = len(dictionary)
+  for word in count:
+    if word[1] > 5:
+      dictionary[word[0]] = len(dictionary)
   data = list()
   unk_count = 0
   for word in words:
@@ -52,21 +78,24 @@ def build_dataset(words):
       index = 0  # dictionary['UNK']
       unk_count += 1
     data.append(index)
-  count[0][1] = unk_count
+  # count[0][1] = unk_count
   reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
   return data, count, dictionary, reverse_dictionary
 
 data, count, dictionary, reverse_dictionary = build_dataset(words)
+vocabulary_size = len(dictionary)
+
+
 del words  # Hint to reduce memory.
 print('Most common words (+UNK)', count[:5])
 print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
+print('vocabulary_size == ', vocabulary_size)
 
-
-pFile = open("/Users/ZRZn1/Downloads/dic.pkl", "wb")
+pFile = open("/Users/zrzn/Downloads/classify_data/dic.pkl", "wb")
 pickle.dump(dictionary, pFile)
 pFile.close()
 
-pFile2 = open("/Users/ZRZn1/Downloads/rev_dic.pkl", "wb")
+pFile2 = open("/Users/zrzn/Downloads/classify_data/rev_dic.pkl", "wb")
 pickle.dump(reverse_dictionary, pFile2)
 pFile2.close()
 

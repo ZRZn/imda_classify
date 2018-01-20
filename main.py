@@ -52,6 +52,7 @@ def length(sequences):
     seq_len = tf.reduce_sum(used, reduction_indices=1)
     return tf.cast(seq_len, tf.int32)
 
+
 #placeholders
 words_data = tf.placeholder(tf.int32, [BATCH_SIZE, None, None])
 labels = tf.placeholder(tf.float32, [BATCH_SIZE, 10])
@@ -122,7 +123,6 @@ predict = tf.argmax(out, axis=1, name='predict')
 label = tf.argmax(labels, axis=1, name='label')
 accuracy = tf.reduce_mean(tf.cast(tf.equal(predict, label), tf.float32))
 
-train_batch_generator = batch_generator(train_X, train_Y, BATCH_SIZE)
 test_batch_generator = batch_generator(test_X, test_Y, BATCH_SIZE)
 
 
@@ -138,10 +138,17 @@ with tf.Session() as sess:
 
         print("epoch: {}\t".format(epoch), end="")
 
+
         # Training
         num_batches = len(train_X) // BATCH_SIZE
+
+        indices = np.arange(num_batches)
+        np.random.shuffle(indices)
+
         for b in range(num_batches):
-            x_train, y_train = next(train_batch_generator)
+            count = indices[b]
+            x_train = train_X[count * BATCH_SIZE: (count + 1) * BATCH_SIZE]
+            y_train = train_Y[count * BATCH_SIZE: (count + 1) * BATCH_SIZE]
             sen_len = len(x_train[0][0])
             sen_num = len(x_train[0])
             # seq_len = np.array([40 for x in range(BATCH_SIZE * SEN_LENTH)])  # actual lengths of sequences

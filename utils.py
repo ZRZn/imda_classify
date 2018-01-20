@@ -1,5 +1,3 @@
-import numpy as np
-
 def batch_generator(X, y, batch_size):
     size = len(X)
     i = 0
@@ -10,3 +8,5 @@ def batch_generator(X, y, batch_size):
         else:
             i = 0
             continue
+
+

@@ -11,8 +11,9 @@ import tensorflow as tf
 import pickle
 import nltk
 from nltk.tokenize import WordPunctTokenizer
+from path import *
 word_cut = WordPunctTokenizer()
-tokenizer = nltk.data.load('/Users/zrzn/Downloads/nltk_data/tokenizers/punkt/PY3/english.pickle')
+tokenizer = nltk.data.load(nltk_path)
 
 
 
@@ -48,7 +49,7 @@ def read_data(file_path_list):
 
 
 
-words = read_data(["/Users/zrzn/Downloads/data/IMDB/test.txt", "/Users/zrzn/Downloads/data/IMDB/train.txt"])
+words = read_data([all_path + "data/IMDB/test.txt", all_path + "data/IMDB/train.txt"])
 
 
 print('Data size == ', len(words))
@@ -91,11 +92,11 @@ print('Most common words (+UNK)', count[:5])
 print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
 print('vocabulary_size == ', vocabulary_size)
 
-pFile = open("/Users/zrzn/Downloads/classify_data/dic.pkl", "wb")
+pFile = open(all_path + "dic.pkl", "wb")
 pickle.dump(dictionary, pFile)
 pFile.close()
 
-pFile2 = open("/Users/zrzn/Downloads/classify_data/rev_dic.pkl", "wb")
+pFile2 = open(all_path + "rev_dic.pkl", "wb")
 pickle.dump(reverse_dictionary, pFile2)
 pFile2.close()
 
@@ -224,6 +225,6 @@ with tf.Session(graph=graph) as session:
           log_str = "%s %s," % (log_str, close_word)
         print(log_str)
   final_embeddings = normalized_embeddings.eval()
-  emb_file = open("/Users/ZRZn1/Downloads/emb_array.pkl", "wb")
+  emb_file = open(all_path + "emb_array.pkl", "wb")
   pickle.dump(final_embeddings, emb_file)
   emb_file.close()

@@ -10,20 +10,19 @@ from tensorflow.contrib.rnn import GRUCell
 from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn as bi_rnn
 from tensorflow.contrib.layers import fully_connected
 from utils import *
+from path import *
 
-NUM_EPOCHS = 10
+NUM_EPOCHS = 3
 BATCH_SIZE = 64
 HIDDEN_SIZE = 50
 EMBEDDING_SIZE = 200
 ATTENTION_SIZE = 100
-SEN_LENTH = 30
-DOCU_LENTH = 11
 KEEP_PROB = 0.8
 DELTA = 0.5
 
 #Load Data
-train_fir = open("/Users/ZRZn1/Downloads/train.pkl", "rb")
-test_fir = open("/Users/ZRZn1/Downloads/test.pkl", "rb")
+train_fir = open(all_path + "train_out.pkl", "rb")
+test_fir = open(all_path + "test_out.pkl", "rb")
 train_X = pickle.load(train_fir)
 train_Y = pickle.load(train_fir)
 test_X = pickle.load(test_fir)
@@ -54,23 +53,28 @@ def length(sequences):
     return tf.cast(seq_len, tf.int32)
 
 #placeholders
-words_data = tf.placeholder(tf.int32, [BATCH_SIZE, DOCU_LENTH, SEN_LENTH])
+words_data = tf.placeholder(tf.int32, [BATCH_SIZE, None, None])
 labels = tf.placeholder(tf.float32, [BATCH_SIZE, 10])
 keep_prob_ph = tf.placeholder(tf.float32)
+sen_len_ph = tf.placeholder(tf.int32)
+sen_num_ph = tf.placeholder(tf.int32)
 # seq_len_ph = tf.placeholder(tf.int32, [None])
 # docu_len_ph = tf.placeholder(tf.int32, [None])
 #Embedding Layer
 
-emb_fir = open("/Users/ZRZn1/Downloads/emb_array.pkl", "rb")
+emb_fir = open(all_path + "emb_array.pkl", "rb")
 emb_np = pickle.load(emb_fir)
 emb_fir.close()
 #embeddings = tf.convert_to_tensor(emb_np, name="embeddings")
 
+
+
 embeddings = tf.Variable(initial_value=emb_np, trainable=True, name="embeddings")
 word_embedded = tf.nn.embedding_lookup(embeddings, words_data)
 
+
 #Sen-Level Bi-RNN Layers
-word_embedded = tf.reshape(word_embedded, [-1, SEN_LENTH, EMBEDDING_SIZE])
+word_embedded = tf.reshape(word_embedded, [-1, sen_len_ph, EMBEDDING_SIZE])
 with tf.variable_scope("word_encoder"):
     gru_fw = GRUCell(HIDDEN_SIZE)
     gru_bw = GRUCell(HIDDEN_SIZE)
@@ -85,7 +89,7 @@ with tf.variable_scope("word_encoder"):
 attention_output = AttentionLayer(rnn_outputs, "word_encoder")
 
 #Docu-Level Bi-RNN Layers
-attention_output = tf.reshape(attention_output, [-1, DOCU_LENTH, HIDDEN_SIZE * 2])
+attention_output = tf.reshape(attention_output, [-1, sen_num_ph, HIDDEN_SIZE * 2])
 with tf.variable_scope("sent_encoder"):
     gru_fw2 = GRUCell(HIDDEN_SIZE)
     gru_bw2= GRUCell(HIDDEN_SIZE)
@@ -121,9 +125,9 @@ accuracy = tf.reduce_mean(tf.cast(tf.equal(predict, label), tf.float32))
 train_batch_generator = batch_generator(train_X, train_Y, BATCH_SIZE)
 test_batch_generator = batch_generator(test_X, test_Y, BATCH_SIZE)
 
-# saver = tf.train.Saver()
+
+
 with tf.Session() as sess:
-    # saver.restore(sess, "/Users/zrzn/Downloads/imda_classify/embedding.ckpt")
     sess.run(tf.global_variables_initializer())
     print("Start learning...")
     for epoch in range(NUM_EPOCHS):
@@ -135,34 +139,59 @@ with tf.Session() as sess:
         print("epoch: {}\t".format(epoch), end="")
 
         # Training
-        num_batches = train_X.shape[0] // BATCH_SIZE
+        num_batches = len(train_X) // BATCH_SIZE
         for b in range(num_batches):
-            x_batch, y_batch = next(train_batch_generator)
-            seq_len = np.array([40 for x in range(BATCH_SIZE * SEN_LENTH)])  # actual lengths of sequences
-            docu_len = np.array([10 for x in range(BATCH_SIZE)])
+            x_train, y_train = next(train_batch_generator)
+            sen_len = len(x_train[0][0])
+            sen_num = len(x_train[0])
+            # seq_len = np.array([40 for x in range(BATCH_SIZE * SEN_LENTH)])  # actual lengths of sequences
+            # docu_len = np.array([10 for x in range(BATCH_SIZE)])
             loss_tr, acc, _ = sess.run([loss, accuracy, optimizer],
-                                       feed_dict={words_data: x_batch,
-                                                  labels: y_batch,
+                                       feed_dict={words_data: x_train,
+                                                  labels: y_train,
+                                                  sen_len_ph: sen_len,
+                                                  sen_num_ph: sen_num,
                                                   keep_prob_ph: KEEP_PROB})
             accuracy_train += acc
             loss_train = loss_tr * DELTA + loss_train * (1 - DELTA)
+            if b % 50 == 0 and b > 200:
+                print("accuracy_train" == accuracy_train / (b + 1))
+                # Testing
+                test_batches = len(test_X) // BATCH_SIZE
+                for z in range(test_batches):
+                    x_test, y_test = next(test_batch_generator)
+                    test_len = len(x_test[0][0])
+                    test_num = len(x_test[0])
+                    # seq_len = np.array([40 for x in range(BATCH_SIZE * DOCU_LENTH)])  # actual lengths of sequences
+                    # docu_len = np.array([10 for x in range(BATCH_SIZE)])
+                    loss_test_batch, test_acc = sess.run([loss, accuracy],
+                                                    feed_dict={words_data: x_test,
+                                                               labels: y_test,
+                                                               sen_len_ph: test_len,
+                                                               sen_num_ph: test_num,
+                                                               keep_prob_ph: 1.0})
+                    accuracy_test += test_acc
+                    loss_test += loss_test_batch
+                accuracy_test /= test_batches
+                loss_test /= test_batches
+                print("accuracy_test == ", accuracy_test)
         accuracy_train /= num_batches
 
-        # Testing
-        num_batches = test_X.shape[0] // BATCH_SIZE
-        for b in range(num_batches):
-            x_batch, y_batch = next(test_batch_generator)
-            seq_len = np.array([40 for x in range(BATCH_SIZE * DOCU_LENTH)])  # actual lengths of sequences
-            docu_len = np.array([10 for x in range(BATCH_SIZE)])
-            loss_test_batch, acc = sess.run([loss, accuracy],
-                                            feed_dict={words_data: x_batch,
-                                                       labels: y_batch,
-                                                       keep_prob_ph: 1.0})
-            accuracy_test += acc
-            loss_test += loss_test_batch
-        accuracy_test /= num_batches
-        loss_test /= num_batches
-        print("accuracy == ", accuracy_test)
-        print("loss: {:.3f}, val_loss: {:.3f}, acc: {:.3f}, val_acc: {:.3f}".format(
-            loss_train, loss_test, accuracy_train, accuracy_test
-        ))
+        # # Testing
+        # num_batches = test_X.shape[0] // BATCH_SIZE
+        # for b in range(num_batches):
+        #     x_batch, y_batch = next(test_batch_generator)
+        #     # seq_len = np.array([40 for x in range(BATCH_SIZE * DOCU_LENTH)])  # actual lengths of sequences
+        #     # docu_len = np.array([10 for x in range(BATCH_SIZE)])
+        #     loss_test_batch, acc = sess.run([loss, accuracy],
+        #                                     feed_dict={words_data: x_batch,
+        #                                                labels: y_batch,
+        #                                                keep_prob_ph: 1.0})
+        #     accuracy_test += acc
+        #     loss_test += loss_test_batch
+        # accuracy_test /= num_batches
+        # loss_test /= num_batches
+        # print("accuracy == ", accuracy_test)
+        # print("loss: {:.3f}, val_loss: {:.3f}, acc: {:.3f}, val_acc: {:.3f}".format(
+        #     loss_train, loss_test, accuracy_train, accuracy_test
+        # ))

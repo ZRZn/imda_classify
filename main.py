@@ -16,6 +16,8 @@ from path import *
 NUM_EPOCHS = 3
 BATCH_SIZE = 64
 HIDDEN_SIZE = 50
+USR_SIZE = 1310
+PRD_SIZE = 1635
 EMBEDDING_SIZE = 200
 ATTENTION_SIZE = 100
 KEEP_PROB = 0.8
@@ -26,12 +28,15 @@ train_fir = open(all_path + "train_out.pkl", "rb")
 test_fir = open(all_path + "test_out.pkl", "rb")
 train_X = pickle.load(train_fir)
 train_Y = pickle.load(train_fir)
+train_U = pickle.load(train_fir)
+train_P = pickle.load(train_fir)
 test_X = pickle.load(test_fir)
 test_Y = pickle.load(test_fir)
+test_U = pickle.load(test_fir)
+test_P = pickle.load(test_fir)
 
 train_fir.close()
 test_fir.close()
-
 
 
 def AttentionLayer(inputs, name):
@@ -57,6 +62,8 @@ def length(sequences):
 #placeholders
 words_data = tf.placeholder(tf.int32, [BATCH_SIZE, None, None])
 labels = tf.placeholder(tf.float32, [BATCH_SIZE, 10])
+user_ph = tf.placeholder(tf.int32, [BATCH_SIZE])
+prd_ph = tf.placeholder(tf.int32, [BATCH_SIZE])
 keep_prob_ph = tf.placeholder(tf.float32)
 sen_len_ph = tf.placeholder(tf.int32)
 sen_num_ph = tf.placeholder(tf.int32)
@@ -68,15 +75,24 @@ emb_fir = open(all_path + "emb_array.pkl", "rb")
 emb_np = pickle.load(emb_fir)
 emb_fir.close()
 #embeddings = tf.convert_to_tensor(emb_np, name="embeddings")
-
-
-
 embeddings = tf.Variable(initial_value=emb_np, trainable=True, name="embeddings")
 word_embedded = tf.nn.embedding_lookup(embeddings, words_data)
+
+#User&Prd embedding
+usr_emb = tf.Variable(tf.zeros(shape=[USR_SIZE, HIDDEN_SIZE * 2]), trainable=True, dtype=tf.float32)
+prd_emb = tf.Variable(tf.zeros(shape=[PRD_SIZE, HIDDEN_SIZE * 2]), trainable=True, dtype=tf.float32)
+#shape = [B, EBD_SIZE]
+usr_data = tf.nn.embedding_lookup(usr_emb, user_ph)
+prd_data = tf.nn.embedding_lookup(prd_emb, prd_ph)
+
 
 
 #Sen-Level Bi-RNN Layers
 word_embedded = tf.reshape(word_embedded, [-1, sen_len_ph, EMBEDDING_SIZE])
+usr_word = tf.reshape(usr_data, (BATCH_SIZE, -1, HIDDEN_SIZE * 2))
+usr_word = tf.tile(usr_word, multiples=(sen_num_ph, sen_len_ph, 1))
+prd_word = tf.reshape(prd_data, (BATCH_SIZE, -1, HIDDEN_SIZE * 2))
+prd_word = tf.tile(prd_word, multiples=(sen_num_ph, sen_len_ph, 1))
 with tf.variable_scope("word_encoder"):
     gru_fw = GRUCell(HIDDEN_SIZE)
     gru_bw = GRUCell(HIDDEN_SIZE)
@@ -85,25 +101,29 @@ with tf.variable_scope("word_encoder"):
                         inputs=word_embedded,
                         sequence_length=length(word_embedded),
                         dtype=tf.float32)
-    rnn_outputs = tf.concat((f_out, b_out), axis= 2)
+    rnn_outputs = tf.concat((f_out, b_out), axis=2)
 
 #Attention Layer
-attention_output = AttentionLayer(rnn_outputs, "word_encoder")
+attention_output = attention(rnn_outputs, ATTENTION_SIZE, usr_word, prd_word)
 
 #Docu-Level Bi-RNN Layers
 attention_output = tf.reshape(attention_output, [-1, sen_num_ph, HIDDEN_SIZE * 2])
+usr_sen = tf.reshape(usr_data, (BATCH_SIZE, -1, HIDDEN_SIZE * 2))
+usr_sen = tf.tile(usr_sen, multiples=(1, sen_num_ph, 1))
+prd_sen = tf.reshape(prd_data, (BATCH_SIZE, -1, HIDDEN_SIZE * 2))
+prd_sen = tf.tile(prd_sen, multiples=(1, sen_num_ph, 1))
 with tf.variable_scope("sent_encoder"):
     gru_fw2 = GRUCell(HIDDEN_SIZE)
-    gru_bw2= GRUCell(HIDDEN_SIZE)
+    gru_bw2 = GRUCell(HIDDEN_SIZE)
     (f_out2, b_out2), _ = bi_rnn(cell_fw=gru_fw2,
                             cell_bw=gru_bw2,
                             inputs=attention_output,
                             sequence_length=length(attention_output),
                             dtype=tf.float32)
-    sen_rnn_outputs = tf.concat((f_out2, b_out2), axis= 2)
+    sen_rnn_outputs = tf.concat((f_out2, b_out2), axis=2)
 
 #Attention Layer
-docu_atten_output = AttentionLayer(sen_rnn_outputs, "sent_encoder")
+docu_atten_output = attention(sen_rnn_outputs, ATTENTION_SIZE, usr_sen, prd_sen)
 
 #Dropout
 drop_out = tf.nn.dropout(docu_atten_output, keep_prob_ph)

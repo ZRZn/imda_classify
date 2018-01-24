@@ -8,8 +8,12 @@ train_fir = open(all_path + "train.pkl", "rb")
 test_fir = open(all_path + "test.pkl", "rb")
 train_X = pickle.load(train_fir)
 train_Y = pickle.load(train_fir)
+train_U = pickle.load(train_fir)
+train_P = pickle.load(train_fir)
 test_X = pickle.load(test_fir)
 test_Y = pickle.load(test_fir)
+test_U = pickle.load(test_fir)
+test_P = pickle.load(test_fir)
 train_fir.close()
 test_fir.close()
 
@@ -22,10 +26,14 @@ def sortBySen(s):
     return max
 
 
-def sortData(x, y, count=256):
+def sortData(x, y, u, p, count=256):
     assert len(x) == len(y)
+    assert len(x) == len(u)
+    assert len(x) == len(p)
     size = len(x)
     for i in range(size):
+        y[i].append(u[i])
+        y[i].append(p[i])
         x[i].append(y[i])
 
     x = sorted(x, key=lambda t: len(t))
@@ -40,13 +48,21 @@ def sortData(x, y, count=256):
     #     print(sortBySen(x[i]))
 
     res_y = []
+    res_u = []
+    res_p = []
     for i in range(size):
-        res_y.append(x[i].pop())
+        temp_y = x[i].pop()
+        res_p.append(temp_y.pop())
+        res_u.append(temp_y.pop())
+        res_y.append(temp_y)
 
-    return x, res_y
+    return x, res_y, res_u, res_p
 
-train_X, train_Y = sortData(train_X, train_Y, 512)
-test_X, test_Y = sortData(test_X, test_Y, 128)
+train_X, train_Y, train_U, train_P = sortData(train_X, train_Y, train_U, train_P, 512)
+test_X, test_Y, test_U, test_P = sortData(test_X, test_Y, test_U, test_P, 128)
+for i in range(15000, 16000):
+    print("U[" + str(i) + "] == ", train_U[i])
+    print("P[" + str(i) + "] == ", train_P[i])
 # for i in range(22016, 22080):
 #     print("len(train_X[" + str(i) +"]) == ", len(train_X[i]))
 #
@@ -117,8 +133,12 @@ test_out = open(all_path + "test_out.pkl", "wb")
 
 pickle.dump(train_X, train_out)
 pickle.dump(train_Y, train_out)
+pickle.dump(train_U, train_out)
+pickle.dump(train_P, train_out)
 train_out.close()
 
 pickle.dump(test_X, test_out)
 pickle.dump(test_Y, test_out)
+pickle.dump(test_U, test_out)
+pickle.dump(test_P, test_out)
 test_out.close()

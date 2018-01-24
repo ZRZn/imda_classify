@@ -13,8 +13,15 @@ tokenizer = nltk.data.load(nltk_path)
 dic_fir = open(all_path + "dic.pkl", "rb")
 dictionary = pickle.load(dic_fir)
 dic_fir.close()
-print(type(dictionary))
-print(dictionary['the'])
+
+usr_file = open(all_path + "usr.dict", "rb")
+prd_file = open(all_path + "prd.dict", "rb")
+usr_dict = pickle.load(usr_file)
+prd_dict = pickle.load(prd_file)
+usr_file.close()
+prd_file.close()
+print(usr_dict)
+print(prd_dict)
 
 def getInput(file_path, classify=10):
     f = open(file_path, "r")
@@ -59,9 +66,16 @@ def getInput(file_path, classify=10):
 
 train_x, train_y, train_u, train_p = getInput(all_path + "data/IMDB/train.txt", 10)
 
+def changeUP(u, p):
+    assert len(u) == len(p)
+    for i in range(len(u)):
+        u[i] = usr_dict[u[i]]
+        p[i] = prd_dict[p[i][1:]]
+    return u, p
 
-for i in range(10):
-    print(train_x[i])
+train_u, train_p = changeUP(train_u, train_p)
+# for i in range(10):
+#     print(train_x[i])
 # train_X = np.array(train_x)
 # print("train_X.shape == ", train_X.shape)
 # train_Y = np.array(train_y)
@@ -76,6 +90,8 @@ print("len(train_x) = ", len(train_x))
 train_fir = open(all_path + "train.pkl", "wb")
 pickle.dump(train_x, train_fir)
 pickle.dump(train_y, train_fir)
+pickle.dump(train_u, train_fir)
+pickle.dump(train_p, train_fir)
 train_fir.close()
 
 
@@ -85,6 +101,10 @@ test_x, test_y, test_u, test_p = getInput(all_path + "data/IMDB/test.txt", 10)
 # test_X = np.array(test_x)
 # test_Y = np.array(test_y)
 assert len(test_x) == len(test_y)
+test_u, test_p = changeUP(test_u, test_p)
+for i in range(6000, 6500):
+    print("U[" + str(i) + "] == ", test_u[i])
+    print("P[" + str(i) + "] == ", test_p[i])
 # indices = np.arange(test_X.shape[0])
 # np.random.shuffle(indices)
 # test_X = test_X[indices]
@@ -93,4 +113,6 @@ print("len(test_x) = ", len(test_x))
 test_fir = open(all_path + "test.pkl", "wb")
 pickle.dump(test_x, test_fir)
 pickle.dump(test_y, test_fir)
+pickle.dump(test_u, test_fir)
+pickle.dump(test_p, test_fir)
 test_fir.close()

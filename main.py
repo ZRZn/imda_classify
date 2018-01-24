@@ -9,6 +9,7 @@ from tensorflow.contrib import layers
 from tensorflow.contrib.rnn import GRUCell
 from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn as bi_rnn
 from tensorflow.contrib.layers import fully_connected
+import numpy as np
 from utils import *
 from path import *
 

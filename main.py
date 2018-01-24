@@ -170,6 +170,8 @@ with tf.Session() as sess:
             count = indices[b]
             x_train = train_X[count * BATCH_SIZE: (count + 1) * BATCH_SIZE]
             y_train = train_Y[count * BATCH_SIZE: (count + 1) * BATCH_SIZE]
+            u_train = train_U[count * BATCH_SIZE: (count + 1) * BATCH_SIZE]
+            p_train = train_P[count * BATCH_SIZE: (count + 1) * BATCH_SIZE]
             sen_len = len(x_train[0][0])
             sen_num = len(x_train[0])
             # seq_len = np.array([40 for x in range(BATCH_SIZE * SEN_LENTH)])  # actual lengths of sequences
@@ -177,6 +179,8 @@ with tf.Session() as sess:
             loss_tr, acc, _ = sess.run([loss, accuracy, optimizer],
                                        feed_dict={words_data: x_train,
                                                   labels: y_train,
+                                                  user_ph: u_train,
+                                                  prd_ph: p_train,
                                                   sen_len_ph: sen_len,
                                                   sen_num_ph: sen_num,
                                                   keep_prob_ph: KEEP_PROB})
@@ -187,7 +191,10 @@ with tf.Session() as sess:
                 # Testing
                 test_batches = len(test_X) // BATCH_SIZE
                 for z in range(test_batches):
-                    x_test, y_test = next(test_batch_generator)
+                    x_test = test_X[z * BATCH_SIZE: (z + 1) * BATCH_SIZE]
+                    y_test = test_Y[z * BATCH_SIZE: (z + 1) * BATCH_SIZE]
+                    u_test = test_U[z * BATCH_SIZE: (z + 1) * BATCH_SIZE]
+                    p_test = test_P[z * BATCH_SIZE: (z + 1) * BATCH_SIZE]
                     test_len = len(x_test[0][0])
                     test_num = len(x_test[0])
                     # seq_len = np.array([40 for x in range(BATCH_SIZE * DOCU_LENTH)])  # actual lengths of sequences
@@ -195,6 +202,8 @@ with tf.Session() as sess:
                     loss_test_batch, test_acc = sess.run([loss, accuracy],
                                                     feed_dict={words_data: x_test,
                                                                labels: y_test,
+                                                               user_ph: u_test,
+                                                               prd_ph: p_test,
                                                                sen_len_ph: test_len,
                                                                sen_num_ph: test_num,
                                                                keep_prob_ph: 1.0})

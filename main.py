@@ -7,6 +7,7 @@ import os
 from attention import attention
 from tensorflow.contrib import layers
 from tensorflow.contrib.rnn import GRUCell
+from tensorflow.contrib.rnn import LSTMCell
 from tensorflow.python.ops.rnn import bidirectional_dynamic_rnn as bi_rnn
 from tensorflow.contrib.layers import fully_connected
 import numpy as np
@@ -94,8 +95,8 @@ usr_word = tf.tile(usr_word, multiples=(sen_num_ph, sen_len_ph, 1))
 prd_word = tf.reshape(prd_data, (BATCH_SIZE, -1, HIDDEN_SIZE * 2))
 prd_word = tf.tile(prd_word, multiples=(sen_num_ph, sen_len_ph, 1))
 with tf.variable_scope("word_encoder"):
-    gru_fw = GRUCell(HIDDEN_SIZE)
-    gru_bw = GRUCell(HIDDEN_SIZE)
+    gru_fw = LSTMCell(HIDDEN_SIZE)
+    gru_bw = LSTMCell(HIDDEN_SIZE)
     (f_out, b_out), _ = bi_rnn(cell_fw=gru_fw,
                         cell_bw=gru_bw,
                         inputs=word_embedded,
@@ -113,8 +114,8 @@ usr_sen = tf.tile(usr_sen, multiples=(1, sen_num_ph, 1))
 prd_sen = tf.reshape(prd_data, (BATCH_SIZE, -1, HIDDEN_SIZE * 2))
 prd_sen = tf.tile(prd_sen, multiples=(1, sen_num_ph, 1))
 with tf.variable_scope("sent_encoder"):
-    gru_fw2 = GRUCell(HIDDEN_SIZE)
-    gru_bw2 = GRUCell(HIDDEN_SIZE)
+    gru_fw2 = LSTMCell(HIDDEN_SIZE)
+    gru_bw2 = LSTMCell(HIDDEN_SIZE)
     (f_out2, b_out2), _ = bi_rnn(cell_fw=gru_fw2,
                             cell_bw=gru_bw2,
                             inputs=attention_output,
@@ -136,7 +137,7 @@ out = tf.squeeze(out)
 
 #Loss
 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=out))
-optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss=loss)
+optimizer = tf.train.AdagradOptimizer(learning_rate=0.001).minimize(loss=loss)
 
 
 # Accuracy metric

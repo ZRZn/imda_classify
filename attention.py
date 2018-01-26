@@ -72,6 +72,7 @@ def attention(inputs, attention_size, usr_data, prd_data, time_major=False, retu
     v = tf.tanh(tf.tensordot(inputs, W_a, axes=1) + tf.tensordot(usr_data, W_u, axes=1) + tf.tensordot(prd_data, W_p, axes=1) + b_omega)
     # For each of the timestamps its vector of size A from `v` is reduced with `u` vector
     vu = tf.tensordot(v, u_omega, axes=1)  # (B,T) shape
+    vu = tf.sigmoid(vu)
     alphas = tf.nn.softmax(vu)  # (B,T) shape also
 
     # Output of (Bi-)RNN is reduced with attention vector; the result has (B,D) shape

@@ -67,16 +67,26 @@ def attention(inputs, attention_size, usr_data, prd_data, time_major=False, retu
     b_omega = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
     u_omega = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
 
+    #Second attention
+    W_a2 = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
+    W_u2 = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
+    W_p2 = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
+    b_omega2 = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
+    u_omega2 = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
     # Applying fully connected layer with non-linear activation to each of the B*T timestamps;
     #  the shape of `v` is (B,T,D)*(D,A)=(B,T,A), where A=attention_size
     v = tf.tanh(tf.tensordot(inputs, W_a, axes=1) + tf.tensordot(usr_data, W_u, axes=1) + tf.tensordot(prd_data, W_p, axes=1) + b_omega)
     # For each of the timestamps its vector of size A from `v` is reduced with `u` vector
     vu = tf.tensordot(v, u_omega, axes=1)  # (B,T) shape
-    vu = tf.sigmoid(vu)
-    alphas = tf.nn.softmax(vu)  # (B,T) shape also
+
+
+    #second
+    v2 = tf.tanh(tf.tensordot(inputs, W_a2, axes=1) + tf.tensordot(usr_data, W_u2, axes=1) + tf.tensordot(prd_data, W_p2, axes=1) + b_omega2)
+    vu2 = tf.tensordot(v2, u_omega2, axes=1)
+    alphas = tf.nn.softmax(tf.concat((vu, vu2), axis=1))  # (B,T) shape also
 
     # Output of (Bi-)RNN is reduced with attention vector; the result has (B,D) shape
-    output = tf.reduce_sum(inputs * tf.expand_dims(alphas, -1), 1)
+    output = tf.reduce_sum(tf.concat((inputs, inputs), axis=1) * tf.expand_dims(alphas, -1), 1)
 
     if not return_alphas:
         return output

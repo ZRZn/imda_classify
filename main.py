@@ -137,7 +137,7 @@ out = tf.squeeze(out)
 
 #Loss
 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=out))
-optimizer = tf.train.AdagradOptimizer(learning_rate=0.001).minimize(loss=loss)
+optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss=loss)
 
 
 # Accuracy metric

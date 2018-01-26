@@ -14,7 +14,7 @@ import numpy as np
 from utils import *
 from path import *
 
-NUM_EPOCHS = 50
+NUM_EPOCHS = 100
 BATCH_SIZE = 64
 HIDDEN_SIZE = 50
 USR_SIZE = 1310

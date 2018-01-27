@@ -3,6 +3,7 @@
 
 import tensorflow as tf
 
+BATCH_SIZE = 64
 def attention(inputs, attention_size, usr_data, prd_data, time_major=False, return_alphas=False):
     """
     Attention mechanism layer which reduces RNN/Bi-RNN outputs with Attention vector.
@@ -58,7 +59,8 @@ def attention(inputs, attention_size, usr_data, prd_data, time_major=False, retu
         inputs = tf.array_ops.transpose(inputs, [1, 0, 2])
 
     hidden_size = inputs.shape[2].value  # D value - hidden size of the RNN layer
-
+    # hidden_size2 = inputs.shape[0].value
+    # print(hidden_size2)
 
     # Trainable parameters
     W_a = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
@@ -67,6 +69,12 @@ def attention(inputs, attention_size, usr_data, prd_data, time_major=False, retu
     b_omega = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
     u_omega = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
 
+    # #Second attention
+    # W_a2 = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
+    # W_u2 = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
+    # W_p2 = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
+    # b_omega2 = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
+    # u_omega2 = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
     # Applying fully connected layer with non-linear activation to each of the B*T timestamps;
     #  the shape of `v` is (B,T,D)*(D,A)=(B,T,A), where A=attention_size
     v = tf.tanh(tf.tensordot(inputs, W_a, axes=1) + tf.tensordot(usr_data, W_u, axes=1) + tf.tensordot(prd_data, W_p, axes=1) + b_omega)
@@ -74,9 +82,35 @@ def attention(inputs, attention_size, usr_data, prd_data, time_major=False, retu
     vu = tf.tensordot(v, u_omega, axes=1)  # (B,T) shape
 
 
+    # #second
+    # v2 = tf.tanh(tf.tensordot(inputs, W_a2, axes=1) + tf.tensordot(usr_data, W_u2, axes=1) + tf.tensordot(prd_data, W_p2, axes=1) + b_omega2)
+    # vu2 = tf.tensordot(v2, u_omega2, axes=1)
     alphas = tf.nn.softmax(vu)  # (B,T) shape also
 
     output = tf.reduce_sum(inputs * tf.expand_dims(alphas, -1), 1)
+    # tempBefore = []
+    # tempAfter = []
+    # for i in range(B):
+    #     tempBefore.append(alphas[i][0:T])
+    #     tempAfter.append(alphas[T:(2 * T)])
+    # tempBefore = tf.stack(tempBefore, axis=0)
+    # tempAfter = tf.stack(tempAfter, axis=0)
+    # alphas = tf.reshape(alphas, shape=(inputs.shape[0].value, 2 * inputs.shape[1].value))
+    # alphas = tf.unstack(alphas, axis=1)
+    # before = []
+    # after = []
+    # for i in range(len(alphas)//2):
+    #     before.append(alphas[i])
+    #     after.append(alphas[i + len(alphas)//2])
+    # beforeA = tf.stack(before, axis=1)
+    # afterA = tf.stack(after, axis=1)
+    # sumBefore = tf.reduce_sum(beforeA, axis=1)
+    # sumAfter = tf.reduce_sum(afterA, axis=1)
+    # flag = tf.greater_equal(sumBefore, sumAfter)    #(B)
+    # finalA = []
+    # for i in range(flag.shape[0]):
+    #     finalA.append(tf.cond(flag[i], lambda: beforeA[i], lambda: afterA[i]))
+    # finalA = tf.stack(finalA, axis=0)  #(B, T)
     # Output of (Bi-)RNN is reduced with attention vector; the result has (B,D) shape
 
     if not return_alphas:

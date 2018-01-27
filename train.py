@@ -23,7 +23,7 @@ EMBEDDING_SIZE = 200
 ATTENTION_SIZE = 100
 KEEP_PROB = 0.8
 DELTA = 0.5
-PosTrain = True
+PosTrain = False
 
 #Load Data
 train_fir = open(all_path + "train_out_np.pkl", "rb")

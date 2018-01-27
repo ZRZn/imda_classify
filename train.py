@@ -23,36 +23,52 @@ EMBEDDING_SIZE = 200
 ATTENTION_SIZE = 100
 KEEP_PROB = 0.8
 DELTA = 0.5
+PosTrain = True
 
 #Load Data
-train_fir = open(all_path + "train_out.pkl", "rb")
-test_fir = open(all_path + "test_out.pkl", "rb")
-train_X = pickle.load(train_fir)
-train_Y = pickle.load(train_fir)
-train_U = pickle.load(train_fir)
-train_P = pickle.load(train_fir)
-test_X = pickle.load(test_fir)
-test_Y = pickle.load(test_fir)
-test_U = pickle.load(test_fir)
-test_P = pickle.load(test_fir)
+train_fir = open(all_path + "train_out_np.pkl", "rb")
+test_fir = open(all_path + "test_out_np.pkl", "rb")
+pos_train_x = pickle.load(train_fir)
+pos_train_y = pickle.load(train_fir)
+pos_train_u = pickle.load(train_fir)
+pos_train_p = pickle.load(train_fir)
+neg_train_x = pickle.load(train_fir)
+neg_train_y = pickle.load(train_fir)
+neg_train_u = pickle.load(train_fir)
+neg_train_p = pickle.load(train_fir)
+
+
+pos_test_x = pickle.load(test_fir)
+pos_test_y = pickle.load(test_fir)
+pos_test_u = pickle.load(test_fir)
+pos_test_p = pickle.load(test_fir)
+neg_test_x = pickle.load(test_fir)
+neg_test_y = pickle.load(test_fir)
+neg_test_u = pickle.load(test_fir)
+neg_test_p = pickle.load(test_fir)
 
 train_fir.close()
 test_fir.close()
 
 
-def AttentionLayer(inputs, name):
-    # inputs是GRU的输出，size是[batch_size, max_time, encoder_size(hidden_size * 2)]
-    with tf.variable_scope(name):
-        # u_context是上下文的重要性向量，用于区分不同单词/句子对于句子/文档的重要程度,
-        # 因为使用双向GRU，所以其长度为2×hidden_szie
-        u_context = tf.Variable(tf.truncated_normal([HIDDEN_SIZE * 2]), name='u_context')
-        # 使用一个全连接层编码GRU的输出的到期隐层表示,输出u的size是[batch_size, max_time, hidden_size * 2]
-        h = layers.fully_connected(inputs, HIDDEN_SIZE * 2, activation_fn=tf.nn.tanh)
-        # shape为[batch_size, max_time, 1]
-        alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(h, u_context), axis=2, keep_dims=True), dim=1)
-        # reduce_sum之前shape为[batch_szie, max_time, hidden_szie*2]，之后shape为[batch_size, hidden_size*2]
-        atten_output = tf.reduce_sum(tf.multiply(inputs, alpha), axis=1)
-        return atten_output
+if PosTrain:
+    train_X = pos_train_x
+    train_Y = pos_train_y
+    train_U = pos_train_u
+    train_P = pos_train_p
+    test_X = pos_test_x
+    test_Y = pos_test_y
+    test_U = pos_test_u
+    test_P = pos_test_p
+else:
+    train_X = neg_train_x
+    train_Y = neg_train_y
+    train_U = neg_train_u
+    train_P = neg_train_p
+    test_X = neg_test_x
+    test_Y = neg_test_y
+    test_U = neg_test_u
+    test_P = neg_test_p
 
 def length(sequences):
     used = tf.sign(tf.reduce_max(tf.abs(sequences), reduction_indices=2))
@@ -69,14 +85,10 @@ keep_prob_ph = tf.placeholder(tf.float32)
 sen_len_ph = tf.placeholder(tf.int32)
 sen_num_ph = tf.placeholder(tf.int32)
 
-# seq_len_ph = tf.placeholder(tf.int32, [None])
-# docu_len_ph = tf.placeholder(tf.int32, [None])
 #Embedding Layer
-
 emb_fir = open(all_path + "emb_array.pkl", "rb")
 emb_np = pickle.load(emb_fir)
 emb_fir.close()
-#embeddings = tf.convert_to_tensor(emb_np, name="embeddings")
 embeddings = tf.Variable(initial_value=emb_np, trainable=True, name="embeddings")
 word_embedded = tf.nn.embedding_lookup(embeddings, words_data)
 
@@ -138,7 +150,7 @@ out = tf.squeeze(out)
 
 #Loss
 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=out))
-optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss=loss)
+optimizer = tf.train.AdagradOptimizer(learning_rate=0.001).minimize(loss=loss)
 
 
 # Accuracy metric
@@ -146,13 +158,12 @@ predict = tf.argmax(out, axis=1, name='predict')
 label = tf.argmax(labels, axis=1, name='label')
 accuracy = tf.reduce_mean(tf.cast(tf.equal(predict, label), tf.float32))
 
-test_batch_generator = batch_generator(test_X, test_Y, BATCH_SIZE)
-
 
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     print("Start learning...")
+
     for epoch in range(NUM_EPOCHS):
         loss_train = 0
         loss_test = 0

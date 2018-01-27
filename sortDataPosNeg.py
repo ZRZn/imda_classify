@@ -140,8 +140,8 @@ def cutSame(x, count=64):
         max_len = sortBySen(x[(i + 1) * count - 1])
         if max_len > 80:
             max_len = sortBySen(x[(i + 1) * count - 2])
-        if max_len > 120:
-            max_len = sortBySen(x[(i + 1) * count - 3])
+            if max_len > 140:
+                max_len = sortBySen(x[(i + 1) * count - 3])
         zeroSen = []
         for t in range(max_len):
             zeroSen.append(0)
@@ -188,33 +188,43 @@ neg_train_x = cutSame(neg_train_x)
 pos_test_x = cutSame(pos_test_x)
 neg_test_x = cutSame(neg_test_x)
 
+def changeY(y, isPos):
+    if not isPos:
+        for i in range(len(y)):
+            y[i] = y[i][:6]
+    else:
+        for i in range(len(y)):
+            y[i] = y[i][6:]
+    return y
 
-print("posLen == ", len(pos_train_x))
-print("neg == ", len(neg_train_x))
-for i in range(11200, 12224):
-    for t in range(len(pos_train_x[i])):
-        print(len(pos_train_x[i][t]))
-    print("-------------------------------------------")
+pos_train_y = changeY(pos_train_y, True)
+neg_train_y = changeY(neg_train_y, False)
+pos_test_y = changeY(pos_test_y, True)
+neg_test_y = changeY(neg_test_y, False)
 
-# train_out_np = open(all_path + "train_out_np.pkl", "wb")
-# test_out_np = open(all_path + "test_out_np.pkl", "wb")
-#
-# pickle.dump(pos_train_x, train_out_np)
-# pickle.dump(pos_train_y, train_out_np)
-# pickle.dump(pos_train_u, train_out_np)
-# pickle.dump(pos_train_p, train_out_np)
-# pickle.dump(neg_train_x, train_out_np)
-# pickle.dump(neg_train_y, train_out_np)
-# pickle.dump(neg_train_u, train_out_np)
-# pickle.dump(neg_train_p, train_out_np)
-# train_out_np.close()
-#
-# pickle.dump(pos_test_x, test_out_np)
-# pickle.dump(pos_test_y, test_out_np)
-# pickle.dump(pos_test_u, test_out_np)
-# pickle.dump(pos_test_p, test_out_np)
-# pickle.dump(neg_test_x, test_out_np)
-# pickle.dump(neg_test_y, test_out_np)
-# pickle.dump(neg_test_u, test_out_np)
-# pickle.dump(neg_test_p, test_out_np)
-# test_out_np.close()
+for i in range(1000, 1200):
+    print(neg_train_y[i])
+
+
+train_out_np = open(all_path + "train_out_np.pkl", "wb")
+test_out_np = open(all_path + "test_out_np.pkl", "wb")
+
+pickle.dump(pos_train_x, train_out_np)
+pickle.dump(pos_train_y, train_out_np)
+pickle.dump(pos_train_u, train_out_np)
+pickle.dump(pos_train_p, train_out_np)
+pickle.dump(neg_train_x, train_out_np)
+pickle.dump(neg_train_y, train_out_np)
+pickle.dump(neg_train_u, train_out_np)
+pickle.dump(neg_train_p, train_out_np)
+train_out_np.close()
+
+pickle.dump(pos_test_x, test_out_np)
+pickle.dump(pos_test_y, test_out_np)
+pickle.dump(pos_test_u, test_out_np)
+pickle.dump(pos_test_p, test_out_np)
+pickle.dump(neg_test_x, test_out_np)
+pickle.dump(neg_test_y, test_out_np)
+pickle.dump(neg_test_u, test_out_np)
+pickle.dump(neg_test_p, test_out_np)
+test_out_np.close()

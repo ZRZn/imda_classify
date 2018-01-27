@@ -83,7 +83,11 @@ def cutSame(x, count=64):
         for j in range(i * count, (i + 1) * count):
             if len(x[j]) > max_num:
                 max_num = len(x[j])
-        max_len = sortBySen(x[(i + 1) * count - 3])
+        max_len = sortBySen(x[(i + 1) * count - 1])
+        if max_len > 80:
+            max_len = sortBySen(x[(i + 1) * count - 2])
+            if max_len > 140:
+                max_len = sortBySen(x[(i + 1) * count - 3])
         zeroSen = []
         for t in range(max_len):
             zeroSen.append(0)
@@ -105,7 +109,7 @@ def cutSame(x, count=64):
     for i in range(size - size % count, size):
         if len(x[i]) > max_last_num:
             max_last_num = len(x[i])
-    max_last_len = sortBySen(x[size - 3])
+    max_last_len = sortBySen(x[size - 2])
     zeroSen = []
     for t in range(max_last_len):
         zeroSen.append(0)

@@ -24,6 +24,7 @@ ATTENTION_SIZE = 100
 KEEP_PROB = 0.8
 DELTA = 0.5
 PosTrain = True
+CLASS = 0
 
 #Load Data
 train_fir = open(all_path + "train_out_np.pkl", "rb")
@@ -60,6 +61,7 @@ if PosTrain:
     test_Y = pos_test_y
     test_U = pos_test_u
     test_P = pos_test_p
+    CLASS = 4
 else:
     train_X = neg_train_x
     train_Y = neg_train_y
@@ -69,6 +71,7 @@ else:
     test_Y = neg_test_y
     test_U = neg_test_u
     test_P = neg_test_p
+    CLASS = 6
 
 def length(sequences):
     used = tf.sign(tf.reduce_max(tf.abs(sequences), reduction_indices=2))
@@ -78,7 +81,7 @@ def length(sequences):
 
 #placeholders
 words_data = tf.placeholder(tf.int32, [BATCH_SIZE, None, None])
-labels = tf.placeholder(tf.float32, [BATCH_SIZE, 10])
+labels = tf.placeholder(tf.float32, [BATCH_SIZE, CLASS])
 user_ph = tf.placeholder(tf.int32, [BATCH_SIZE])
 prd_ph = tf.placeholder(tf.int32, [BATCH_SIZE])
 keep_prob_ph = tf.placeholder(tf.float32)
@@ -143,7 +146,7 @@ docu_atten_output = attention(sen_rnn_outputs, ATTENTION_SIZE, usr_sen, prd_sen)
 drop_out = tf.nn.dropout(docu_atten_output, keep_prob_ph)
 
 #Full Connected
-W = tf.Variable(tf.truncated_normal([HIDDEN_SIZE * 2, 10], stddev=0.1))
+W = tf.Variable(tf.truncated_normal([HIDDEN_SIZE * 2, CLASS], stddev=0.1))
 b = tf.Variable(tf.constant(0., shape=[10]))
 out = tf.nn.xw_plus_b(drop_out, W, b)
 out = tf.squeeze(out)
@@ -181,7 +184,6 @@ with tf.Session() as sess:
 
         for b in range(num_batches):
             count = indices[b]
-            print("迭代轮数:", count)
             x_train = train_X[count * BATCH_SIZE: (count + 1) * BATCH_SIZE]
             y_train = train_Y[count * BATCH_SIZE: (count + 1) * BATCH_SIZE]
             u_train = train_U[count * BATCH_SIZE: (count + 1) * BATCH_SIZE]

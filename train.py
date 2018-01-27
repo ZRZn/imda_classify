@@ -181,6 +181,7 @@ with tf.Session() as sess:
 
         for b in range(num_batches):
             count = indices[b]
+            print("迭代轮数:", count)
             x_train = train_X[count * BATCH_SIZE: (count + 1) * BATCH_SIZE]
             y_train = train_Y[count * BATCH_SIZE: (count + 1) * BATCH_SIZE]
             u_train = train_U[count * BATCH_SIZE: (count + 1) * BATCH_SIZE]
@@ -199,7 +200,7 @@ with tf.Session() as sess:
                                                   keep_prob_ph: KEEP_PROB})
             accuracy_train += acc
             loss_train = loss_tr * DELTA + loss_train * (1 - DELTA)
-            if b % 20 == 0 and b > 200:
+            if b % 50 == 0 and b > 100:
                 print("accuracy_train" == accuracy_train / (b + 1))
                 # Testing
                 test_batches = len(test_X) // BATCH_SIZE

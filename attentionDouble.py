@@ -96,7 +96,7 @@ def attentionDouble(inputs, attention_size, usr_data, prd_data, length, time_maj
     flag = tf.cast(flag, tf.float32)
     revFlag = tf.cast(revFlag, tf.float32)
     final = before * tf.expand_dims(flag, -1) + after * tf.expand_dims(revFlag, -1)
-
+    final = tf.nn.softmax(final)
 
     output = tf.reduce_sum(inputs * tf.expand_dims(final, -1), 1)
     # Output of (Bi-)RNN is reduced with attention vector; the result has (B,D) shape

@@ -23,7 +23,7 @@ EMBEDDING_SIZE = 200
 ATTENTION_SIZE = 100
 KEEP_PROB = 0.8
 DELTA = 0.5
-PosTrain = True
+PosTrain = False
 CLASS = 0
 
 #Load Data
@@ -147,13 +147,13 @@ drop_out = tf.nn.dropout(docu_atten_output, keep_prob_ph)
 
 #Full Connected
 W = tf.Variable(tf.truncated_normal([HIDDEN_SIZE * 2, CLASS], stddev=0.1))
-b = tf.Variable(tf.constant(0., shape=[10]))
+b = tf.Variable(tf.constant(0., shape=[CLASS]))
 out = tf.nn.xw_plus_b(drop_out, W, b)
 out = tf.squeeze(out)
 
 #Loss
 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=out))
-optimizer = tf.train.AdagradOptimizer(learning_rate=0.01).minimize(loss=loss)
+optimizer = tf.train.AdagradOptimizer(learning_rate=0.001).minimize(loss=loss)
 
 
 # Accuracy metric
@@ -202,7 +202,7 @@ with tf.Session() as sess:
                                                   keep_prob_ph: KEEP_PROB})
             accuracy_train += acc
             loss_train = loss_tr * DELTA + loss_train * (1 - DELTA)
-            if b % 30 == 0 and b > 100:
+            if b % 5 == 0 and b > 0:
                 print("accuracy_train" == accuracy_train / (b + 1))
                 # Testing
                 test_batches = len(test_X) // BATCH_SIZE

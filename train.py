@@ -73,6 +73,8 @@ else:
     test_P = neg_test_p
     CLASS = 6
 
+
+
 def length(sequences):
     used = tf.sign(tf.reduce_max(tf.abs(sequences), reduction_indices=2))
     seq_len = tf.reduce_sum(used, reduction_indices=1)

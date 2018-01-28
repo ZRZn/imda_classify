@@ -4,7 +4,7 @@
 import tensorflow as tf
 
 BATCH_SIZE = 64
-def attention(inputs, attention_size, usr_data, prd_data, length, time_major=False, return_alphas=False):
+def attentionDouble(inputs, attention_size, usr_data, prd_data, length, time_major=False, return_alphas=False):
     """
     Attention mechanism layer which reduces RNN/Bi-RNN outputs with Attention vector.
 
@@ -96,30 +96,9 @@ def attention(inputs, attention_size, usr_data, prd_data, length, time_major=Fal
     flag = tf.cast(flag, tf.float32)
     revFlag = tf.cast(revFlag, tf.float32)
     final = before * tf.expand_dims(flag, -1) + after * tf.expand_dims(revFlag, -1)
+
+
     output = tf.reduce_sum(inputs * tf.expand_dims(final, -1), 1)
-    # tempBefore = []
-    # tempAfter = []
-    # for i in range(B):
-    #     tempBefore.append(alphas[i][0:T])
-    #     tempAfter.append(alphas[T:(2 * T)])
-    # tempBefore = tf.stack(tempBefore, axis=0)
-    # tempAfter = tf.stack(tempAfter, axis=0)
-    # alphas = tf.reshape(alphas, shape=(inputs.shape[0].value, 2 * inputs.shape[1].value))
-    # alphas = tf.unstack(alphas, axis=1)
-    # before = []
-    # after = []
-    # for i in range(len(alphas)//2):
-    #     before.append(alphas[i])
-    #     after.append(alphas[i + len(alphas)//2])
-    # beforeA = tf.stack(before, axis=1)
-    # afterA = tf.stack(after, axis=1)
-    # sumBefore = tf.reduce_sum(beforeA, axis=1)
-    # sumAfter = tf.reduce_sum(afterA, axis=1)
-    # flag = tf.greater_equal(sumBefore, sumAfter)    #(B)
-    # finalA = []
-    # for i in range(flag.shape[0]):
-    #     finalA.append(tf.cond(flag[i], lambda: beforeA[i], lambda: afterA[i]))
-    # finalA = tf.stack(finalA, axis=0)  #(B, T)
     # Output of (Bi-)RNN is reduced with attention vector; the result has (B,D) shape
 
     if not return_alphas:

@@ -24,7 +24,7 @@ ATTENTION_SIZE = 100
 KEEP_PROB = 0.8
 DELTA = 0.5
 PosTrain = False
-CLASS = 0
+CLASS = 10
 
 #Load Data
 train_fir = open(all_path + "train_out_np.pkl", "rb")
@@ -61,7 +61,6 @@ if PosTrain:
     test_Y = pos_test_y
     test_U = pos_test_u
     test_P = pos_test_p
-    CLASS = 4
 else:
     train_X = neg_train_x
     train_Y = neg_train_y
@@ -71,7 +70,6 @@ else:
     test_Y = neg_test_y
     test_U = neg_test_u
     test_P = neg_test_p
-    CLASS = 6
 
 
 

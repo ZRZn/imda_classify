@@ -138,9 +138,9 @@ def cutSame(x, count=64):
             if len(x[j]) > max_num:
                 max_num = len(x[j])
         max_len = sortBySen(x[(i + 1) * count - 1])
-        if max_len > 80:
+        if max_len > 50:
             max_len = sortBySen(x[(i + 1) * count - 2])
-            if max_len > 140:
+            if max_len > 75:
                 max_len = sortBySen(x[(i + 1) * count - 3])
         zeroSen = []
         for t in range(max_len):
@@ -188,22 +188,22 @@ neg_train_x = cutSame(neg_train_x)
 pos_test_x = cutSame(pos_test_x)
 neg_test_x = cutSame(neg_test_x)
 
-def changeY(y, isPos):
-    if not isPos:
-        for i in range(len(y)):
-            y[i] = y[i][:6]
-    else:
-        for i in range(len(y)):
-            y[i] = y[i][6:]
-    return y
-
-pos_train_y = changeY(pos_train_y, True)
-neg_train_y = changeY(neg_train_y, False)
-pos_test_y = changeY(pos_test_y, True)
-neg_test_y = changeY(neg_test_y, False)
-
-for i in range(1000, 1200):
-    print(neg_train_y[i])
+# def changeY(y, isPos):
+#     if not isPos:
+#         for i in range(len(y)):
+#             y[i] = y[i][:6]
+#     else:
+#         for i in range(len(y)):
+#             y[i] = y[i][6:]
+#     return y
+#
+# pos_train_y = changeY(pos_train_y, True)
+# neg_train_y = changeY(neg_train_y, False)
+# pos_test_y = changeY(pos_test_y, True)
+# neg_test_y = changeY(neg_test_y, False)
+#
+# for i in range(1000, 1200):
+#     print(neg_train_y[i])
 
 
 train_out_np = open(all_path + "train_out_np.pkl", "wb")

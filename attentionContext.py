@@ -4,7 +4,7 @@
 import tensorflow as tf
 
 BATCH_SIZE = 64
-def attentionDouble(inputs, attention_size, usr_data, prd_data, length, time_major=False, return_alphas=False):
+def attentionContext(inputs, attention_size, usr_data, prd_data, batch, length, time_major=False, return_alphas=False):
     """
     Attention mechanism layer which reduces RNN/Bi-RNN outputs with Attention vector.
 
@@ -62,6 +62,11 @@ def attentionDouble(inputs, attention_size, usr_data, prd_data, length, time_maj
     # hidden_size2 = inputs.shape[0].value
     # print(hidden_size2)
 
+    context = tf.reduce_mean(inputs, axis=1)    #(B,D)
+    context = tf.reshape(context, shape=(batch, -1, hidden_size))  #(B, 1, D)
+    context = tf.tile(context, multiples=(1, length, 1))     #(B, T, D)
+
+
     # Trainable parameters
     W_a = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
     W_u = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
@@ -83,22 +88,16 @@ def attentionDouble(inputs, attention_size, usr_data, prd_data, length, time_maj
 
 
     #second
-    v2 = tf.tanh(tf.tensordot(inputs, W_a2, axes=1) + tf.tensordot(usr_data, W_u2, axes=1) + tf.tensordot(prd_data, W_p2, axes=1) + b_omega2)
+    v2 = tf.tanh(tf.tensordot(context, W_a2, axes=1) + tf.tensordot(usr_data, W_u2, axes=1) + tf.tensordot(prd_data, W_p2, axes=1) + b_omega2)
     vu2 = tf.tensordot(v2, u_omega2, axes=1)
-    alphas = tf.nn.softmax(tf.concat((vu, vu2), axis=1))  # (B,2T) shape also
+    alphas = tf.nn.softmax(tf.concat((vu, vu2), axis=1))  # (B,2T) shape
 
     before = alphas[:, :length]
     after = alphas[:, length:]
-    sumBefore = tf.reduce_sum(before, axis=1)       #(B, ) shape
-    sumAfter = tf.reduce_sum(after, axis=1)
-    flag = tf.greater_equal(sumBefore, sumAfter)
-    revFlag = tf.greater_equal(sumAfter, sumBefore)
-    flag = tf.cast(flag, tf.float32)
-    revFlag = tf.cast(revFlag, tf.float32)
-    final = before * tf.expand_dims(flag, -1) + after * tf.expand_dims(revFlag, -1)
 
-    final = tf.nn.softmax(final)
-    output = tf.reduce_sum(inputs * tf.expand_dims(final, -1), 1)
+
+
+    output = tf.reduce_sum(inputs * tf.expand_dims(before, -1), 1) + tf.reduce_sum(context * tf.expand_dims(after, -1), 1)
     # Output of (Bi-)RNN is reduced with attention vector; the result has (B,D) shape
 
     if not return_alphas:

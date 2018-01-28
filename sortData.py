@@ -84,9 +84,9 @@ def cutSame(x, count=64):
             if len(x[j]) > max_num:
                 max_num = len(x[j])
         max_len = sortBySen(x[(i + 1) * count - 1])
-        if max_len > 80:
+        if max_len > 50:
             max_len = sortBySen(x[(i + 1) * count - 2])
-            if max_len > 140:
+            if max_len > 75:
                 max_len = sortBySen(x[(i + 1) * count - 3])
         zeroSen = []
         for t in range(max_len):
@@ -131,6 +131,9 @@ def cutSame(x, count=64):
 train_X = cutSame(train_X)
 test_X = cutSame(test_X)
 
+# for i in range(35328, 36865):
+#     print(len(train_X[i][0]))
+#     #print("-----------------------------------------------------")
 
 train_out = open(all_path + "train_out.pkl", "wb")
 test_out = open(all_path + "test_out.pkl", "wb")

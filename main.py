@@ -108,7 +108,8 @@ with tf.variable_scope("word_encoder"):
     rnn_outputs = tf.concat((f_out, b_out), axis=2)
 
 #Attention Layer
-attention_output = attentionContext(rnn_outputs, ATTENTION_SIZE, usr_word, prd_word, BATCH_SIZE * sen_num_ph, sen_len_ph)
+#attention_output = attentionContext(rnn_outputs, ATTENTION_SIZE, usr_word, prd_word, BATCH_SIZE * sen_num_ph, sen_len_ph)
+attention_output = attention(rnn_outputs, ATTENTION_SIZE, usr_word, prd_word)
 
 #Docu-Level Bi-RNN Layers
 attention_output = tf.reshape(attention_output, [-1, sen_num_ph, HIDDEN_SIZE * 2])
@@ -127,7 +128,8 @@ with tf.variable_scope("sent_encoder"):
     sen_rnn_outputs = tf.concat((f_out2, b_out2), axis=2)
 
 #Attention Layer
-docu_atten_output = attentionContext(sen_rnn_outputs, ATTENTION_SIZE, usr_sen, prd_sen, BATCH_SIZE, sen_num_ph)
+#docu_atten_output = attentionContext(sen_rnn_outputs, ATTENTION_SIZE, usr_sen, prd_sen, BATCH_SIZE, sen_num_ph)
+docu_atten_output = attention(sen_rnn_outputs, ATTENTION_SIZE, usr_sen, prd_sen)
 
 #Dropout
 drop_out = tf.nn.dropout(docu_atten_output, keep_prob_ph)

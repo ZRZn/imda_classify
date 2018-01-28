@@ -4,7 +4,7 @@
 import tensorflow as tf
 
 BATCH_SIZE = 64
-def attention(inputs, attention_size, usr_data, prd_data, time_major=False, return_alphas=False):
+def attention(inputs, attention_size, usr_data, prd_data, length, time_major=False, return_alphas=False):
     """
     Attention mechanism layer which reduces RNN/Bi-RNN outputs with Attention vector.
 
@@ -69,12 +69,12 @@ def attention(inputs, attention_size, usr_data, prd_data, time_major=False, retu
     b_omega = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
     u_omega = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
 
-    # #Second attention
-    # W_a2 = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
-    # W_u2 = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
-    # W_p2 = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
-    # b_omega2 = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
-    # u_omega2 = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
+    #Second attention
+    W_a2 = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
+    W_u2 = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
+    W_p2 = tf.Variable(tf.random_normal([hidden_size, attention_size], stddev=0.1))
+    b_omega2 = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
+    u_omega2 = tf.Variable(tf.random_normal([attention_size], stddev=0.1))
     # Applying fully connected layer with non-linear activation to each of the B*T timestamps;
     #  the shape of `v` is (B,T,D)*(D,A)=(B,T,A), where A=attention_size
     v = tf.tanh(tf.tensordot(inputs, W_a, axes=1) + tf.tensordot(usr_data, W_u, axes=1) + tf.tensordot(prd_data, W_p, axes=1) + b_omega)
@@ -82,12 +82,21 @@ def attention(inputs, attention_size, usr_data, prd_data, time_major=False, retu
     vu = tf.tensordot(v, u_omega, axes=1)  # (B,T) shape
 
 
-    # #second
-    # v2 = tf.tanh(tf.tensordot(inputs, W_a2, axes=1) + tf.tensordot(usr_data, W_u2, axes=1) + tf.tensordot(prd_data, W_p2, axes=1) + b_omega2)
-    # vu2 = tf.tensordot(v2, u_omega2, axes=1)
-    alphas = tf.nn.softmax(vu)  # (B,T) shape also
+    #second
+    v2 = tf.tanh(tf.tensordot(inputs, W_a2, axes=1) + tf.tensordot(usr_data, W_u2, axes=1) + tf.tensordot(prd_data, W_p2, axes=1) + b_omega2)
+    vu2 = tf.tensordot(v2, u_omega2, axes=1)
+    alphas = tf.nn.softmax(tf.concat((vu, vu2), axis=1))  # (B,2T) shape also
 
-    output = tf.reduce_sum(inputs * tf.expand_dims(alphas, -1), 1)
+    before = alphas[:, :length]
+    after = alphas[:, length:]
+    sumBefore = tf.reduce_sum(before, axis=1)       #(B, ) shape
+    sumAfter = tf.reduce_sum(after, axis=1)
+    flag = tf.greater_equal(sumBefore, sumAfter)
+    revFlag = tf.greater_equal(sumAfter, sumBefore)
+    flag = tf.cast(flag, tf.float32)
+    revFlag = tf.cast(revFlag, tf.float32)
+    final = before * tf.expand_dims(flag, -1) + after * tf.expand_dims(revFlag, -1)
+    output = tf.reduce_sum(inputs * tf.expand_dims(final, -1), 1)
     # tempBefore = []
     # tempAfter = []
     # for i in range(B):

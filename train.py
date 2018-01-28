@@ -73,6 +73,8 @@ else:
     test_P = neg_test_p
     CLASS = 6
 
+
+
 def length(sequences):
     used = tf.sign(tf.reduce_max(tf.abs(sequences), reduction_indices=2))
     seq_len = tf.reduce_sum(used, reduction_indices=1)
@@ -147,7 +149,7 @@ drop_out = tf.nn.dropout(docu_atten_output, keep_prob_ph)
 
 #Full Connected
 W = tf.Variable(tf.truncated_normal([HIDDEN_SIZE * 2, CLASS], stddev=0.1))
-b = tf.Variable(tf.constant(0., shape=[10]))
+b = tf.Variable(tf.constant(0., shape=[CLASS]))
 out = tf.nn.xw_plus_b(drop_out, W, b)
 out = tf.squeeze(out)
 
